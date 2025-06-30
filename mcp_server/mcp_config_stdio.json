@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "graphiti": {
+      "command": "docker",
+      "args": [
+        "exec",
+        "-i",
+        "mcp_server-graphiti-mcp-1",
+        "uv",
+        "run",
+        "graphiti_mcp_server.py",
+        "--transport",
+        "stdio"
+      ],
+      "env": {}
+    }
+  }
+}
