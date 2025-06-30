@@ -200,6 +200,7 @@ class GraphitiLLMConfig(BaseModel):
     azure_openai_deployment_name: str | None = None
     azure_openai_api_version: str | None = None
     azure_openai_use_managed_identity: bool = False
+    base_url: str | None = None  # For Ollama and other OpenAI-compatible endpoints
 
     @classmethod
     def from_env(cls) -> 'GraphitiLLMConfig':
@@ -218,6 +219,8 @@ class GraphitiLLMConfig(BaseModel):
         azure_openai_use_managed_identity = (
             os.environ.get('AZURE_OPENAI_USE_MANAGED_IDENTITY', 'false').lower() == 'true'
         )
+        
+        base_url = os.environ.get('OPENAI_BASE_URL', None)
 
         if azure_openai_endpoint is None:
             # Setup for OpenAI API
@@ -236,6 +239,7 @@ class GraphitiLLMConfig(BaseModel):
                 model=model,
                 small_model=small_model,
                 temperature=float(os.environ.get('LLM_TEMPERATURE', '0.0')),
+                base_url=base_url,
             )
         else:
             # Setup for Azure OpenAI API
@@ -333,11 +337,19 @@ class GraphitiLLMConfig(BaseModel):
             else:
                 raise ValueError('OPENAI_API_KEY must be set when using Azure OpenAI API')
 
+        # For Ollama and other local endpoints, API key can be a dummy value
         if not self.api_key:
-            raise ValueError('OPENAI_API_KEY must be set when using OpenAI API')
+            if self.base_url and ('localhost' in self.base_url or '127.0.0.1' in self.base_url or self.base_url.startswith('http://192.168.')):
+                logger.warning('No API key provided for local endpoint. Using dummy key.')
+                self.api_key = 'abc'  # Dummy key for local endpoints like Ollama
+            else:
+                raise ValueError('OPENAI_API_KEY must be set when using OpenAI API')
 
         llm_client_config = LLMConfig(
-            api_key=self.api_key, model=self.model, small_model=self.small_model
+            api_key=self.api_key, 
+            model=self.model, 
+            small_model=self.small_model,
+            base_url=self.base_url
         )
 
         # Set temperature
@@ -358,6 +370,8 @@ class GraphitiEmbedderConfig(BaseModel):
     azure_openai_deployment_name: str | None = None
     azure_openai_api_version: str | None = None
     azure_openai_use_managed_identity: bool = False
+    base_url: str | None = None  # For Ollama and other OpenAI-compatible endpoints
+    embedding_dim: int | None = None  # For custom embedding dimensions (e.g., nomic-embed-text: 768)
 
     @classmethod
     def from_env(cls) -> 'GraphitiEmbedderConfig':
@@ -375,6 +389,11 @@ class GraphitiEmbedderConfig(BaseModel):
         azure_openai_use_managed_identity = (
             os.environ.get('AZURE_OPENAI_USE_MANAGED_IDENTITY', 'false').lower() == 'true'
         )
+        
+        base_url = os.environ.get('OPENAI_BASE_URL', None)
+        embedding_dim_env = os.environ.get('EMBEDDING_DIM', '')
+        embedding_dim = int(embedding_dim_env) if embedding_dim_env.strip() else None
+        
         if azure_openai_endpoint is not None:
             # Setup for Azure OpenAI API
             # Log if empty deployment name was provided
@@ -408,6 +427,8 @@ class GraphitiEmbedderConfig(BaseModel):
             return cls(
                 model=model,
                 api_key=os.environ.get('OPENAI_API_KEY'),
+                base_url=base_url,
+                embedding_dim=embedding_dim,
             )
 
     def create_client(self) -> EmbedderClient | None:
@@ -440,11 +461,21 @@ class GraphitiEmbedderConfig(BaseModel):
                 logger.error('OPENAI_API_KEY must be set when using Azure OpenAI API')
                 return None
         else:
-            # OpenAI API setup
-            if not self.api_key:
-                return None
+            # OpenAI API setup (including Ollama and other compatible endpoints)
+            api_key = self.api_key
+            if not api_key:
+                if self.base_url and ('localhost' in self.base_url or '127.0.0.1' in self.base_url or self.base_url.startswith('http://192.168.')):
+                    logger.warning('No API key provided for local embedding endpoint. Using dummy key.')
+                    api_key = 'abc'  # Dummy key for local endpoints like Ollama
+                else:
+                    return None
 
-            embedder_config = OpenAIEmbedderConfig(api_key=self.api_key, embedding_model=self.model)
+            embedder_config = OpenAIEmbedderConfig(
+                api_key=api_key, 
+                embedding_model=self.model,
+                base_url=self.base_url,
+                embedding_dim=self.embedding_dim
+            )
 
             return OpenAIEmbedder(config=embedder_config)
 
