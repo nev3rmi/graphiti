@@ -7,14 +7,8 @@ services:
       - path: .env
         required: false # Makes the file optional. Default value is 'true'
     environment:
-      - NEO4J_URI=${NEO4J_URI}
-      - NEO4J_USER=${NEO4J_USER}
-      - NEO4J_PASSWORD=${NEO4J_PASSWORD}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - MODEL_NAME=${MODEL_NAME}
-      - MCP_SERVER_HOST=${MCP_SERVER_HOST:-0.0.0.0}
+      - MCP_SERVER_HOST=0.0.0.0
       - PATH=/root/.local/bin:${PATH}
-      - SEMAPHORE_LIMIT=${SEMAPHORE_LIMIT:-10}
     ports:
       - "8000:8000" # Expose the MCP server via HTTP for SSE transport
     command: ["uv", "run", "graphiti_mcp_server.py", "--transport", "sse"]
