@@ -1,17 +1,270 @@
-# Graphiti MCP Server
+# Graphiti MCP Server with Ollama Integration
 
-Graphiti is a framework for building and querying temporally-aware knowledge graphs, specifically tailored for AI agents
-operating in dynamic environments. Unlike traditional retrieval-augmented generation (RAG) methods, Graphiti
-continuously integrates user interactions, structured and unstructured enterprise data, and external information into a
-coherent, queryable graph. The framework supports incremental data updates, efficient retrieval, and precise historical
-queries without requiring complete graph recomputation, making it suitable for developing interactive, context-aware AI
-applications.
+A Model Context Protocol (MCP) server that exposes Graphiti's temporally-aware knowledge graph functionality with full Ollama support for local AI processing.
 
-This is an experimental Model Context Protocol (MCP) server implementation for Graphiti. The MCP server exposes
-Graphiti's key functionality through the MCP protocol, allowing AI assistants to interact with Graphiti's knowledge
-graph capabilities.
+## 🚀 Quick Start
 
-## Features
+### Prerequisites
+- Docker and Docker Compose
+- Ollama server with required models
+- Neo4j database (can be provided via Docker)
+
+### 1. Clone and Setup
+```bash
+git clone <repository>
+cd mcp_server/
+cp .env.optimized .env  # Copy and customize environment
+```
+
+### 2. Start Services
+```bash
+# Start MCP server (includes Neo4j if needed)
+docker compose up -d
+
+# Verify everything is running
+python3 run_tests.py --health-check
+```
+
+### 3. Verify Integration
+```bash
+# Run all tests
+python3 run_tests.py
+
+# Generate status report
+python3 tests/reports/ollama_status_report.py
+```
+
+## 🔧 Configuration
+
+### Environment Variables (.env)
+```bash
+# Neo4j Database
+NEO4J_URI=neo4j://192.168.31.150:7687
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=your_password
+
+# Ollama Configuration
+OPENAI_API_KEY=abc  # Dummy key for Ollama
+OPENAI_BASE_URL=http://192.168.31.134:11434/v1/
+MODEL_NAME=deepseek-r1:latest
+EMBEDDER_MODEL_NAME=mxbai-embed-large:latest
+EMBEDDING_DIM=1024
+```
+
+### Required Ollama Models
+```bash
+# Install required models on Ollama server
+ollama pull deepseek-r1:latest
+ollama pull mxbai-embed-large:latest
+```
+
+## 🧪 Testing
+
+### Test Organization
+```
+tests/
+├── integration/     # External service integration tests
+├── unit/           # Component unit tests  
+├── validation/     # Data verification tests
+├── reports/        # Status and health reports
+└── legacy/         # Historical test files
+```
+
+### Running Tests
+```bash
+# Complete system health check
+python3 run_tests.py --health-check
+
+# Run specific test suites
+python3 run_tests.py --suite unit
+python3 run_tests.py --suite integration
+python3 run_tests.py --suite validation
+
+# Run all tests with reports
+python3 run_tests.py --reports
+
+# Individual test files
+python3 tests/integration/test_ollama_integration.py
+python3 tests/validation/test_mcp_tools.py
+```
+
+## 🔌 MCP Tools Available
+
+### Core Tools
+- **add_episode**: Store conversations in knowledge graph
+- **search_nodes**: Find entities and relationships
+- **search_facts**: Search for specific relationship facts
+- **get_episodes**: Retrieve recent episodes
+- **get_status**: Check server health
+- **clear_graph**: Reset knowledge graph
+
+### Entity Types
+- **Preference**: User likes/dislikes
+- **Procedure**: Step-by-step instructions
+- **Requirement**: Project needs and specifications
+
+## 🌐 Integration
+
+### Claude Desktop
+Use the generated `mcp_config_stdio.json`:
+```json
+{
+  "mcpServers": {
+    "graphiti": {
+      "command": "uv",
+      "args": ["run", "graphiti_mcp_server.py", "--transport", "stdio"],
+      "cwd": "/path/to/mcp_server"
+    }
+  }
+}
+```
+
+### SSE Transport (Web Applications)
+Connect to: `http://localhost:8000/sse`
+
+### Neo4j Browser
+Access knowledge graph: `http://192.168.31.150:7474`
+
+## 📊 System Architecture
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   AI Assistant  │◄──►│  MCP Server     │◄──►│  Neo4j Database │
+│   (Claude, etc) │    │  (Port 8000)    │    │  (Port 7474)    │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                                │
+                                ▼
+                       ┌─────────────────┐
+                       │  Ollama Server  │
+                       │  (Port 11434)   │
+                       │  - LLM Model    │
+                       │  - Embeddings   │
+                       └─────────────────┘
+```
+
+## 🎯 Key Features
+
+### ✅ Local AI Processing
+- **Zero external API calls** - Complete privacy
+- **No API usage costs** - Unlimited usage
+- **Offline capable** - No internet dependency
+- **Custom models** - Use any Ollama-compatible model
+
+### ✅ Persistent Memory
+- **Temporal knowledge graph** - Time-aware relationships
+- **Hybrid search** - Semantic + keyword + graph traversal
+- **Entity extraction** - Automatic relationship discovery
+- **Conversation context** - Long-term memory across sessions
+
+### ✅ Production Ready
+- **Docker deployment** - Containerized and scalable
+- **Health monitoring** - Comprehensive status reporting
+- **Test coverage** - Full test suite included
+- **Documentation** - Complete setup and usage guides
+
+## 🔍 Monitoring and Debugging
+
+### Health Checks
+```bash
+# Comprehensive system check
+python3 tests/reports/system_health_check.py
+
+# Ollama status report
+python3 tests/reports/ollama_status_report.py
+
+# Check container logs
+docker logs mcp_server-graphiti-mcp-1
+```
+
+### Neo4j Queries
+See `tests/reports/neo4j_browser_queries.md` for useful queries to explore your knowledge graph.
+
+### Performance Tuning
+- Adjust `SEMAPHORE_LIMIT` for concurrency control
+- Monitor resource usage with `docker stats`
+- Use faster models for better performance
+- Scale Neo4j resources as needed
+
+## 🛠️ Development
+
+### Project Structure
+```
+mcp_server/
+├── graphiti_mcp_server.py      # Main MCP server
+├── docker-compose.yml          # Docker services
+├── Dockerfile                  # Container definition
+├── .env                        # Environment config
+├── run_tests.py               # Test runner
+├── tests/                     # Test suite
+│   ├── integration/           # Integration tests
+│   ├── unit/                  # Unit tests
+│   ├── validation/            # Validation tests
+│   └── reports/               # Status reports
+└── README.md                  # This file
+```
+
+### Adding New Features
+1. Implement in `graphiti_mcp_server.py`
+2. Add tests in appropriate `tests/` subdirectory
+3. Update documentation
+4. Run full test suite: `python3 run_tests.py`
+
+## 📋 Troubleshooting
+
+### Common Issues
+
+**Container won't start:**
+```bash
+docker compose down
+docker compose up --build
+```
+
+**Ollama not responding:**
+```bash
+curl http://192.168.31.134:11434/api/tags
+ollama list  # Check installed models
+```
+
+**Neo4j connection failed:**
+```bash
+# Check Neo4j is accessible
+curl http://192.168.31.150:7474
+# Verify credentials in .env
+```
+
+**Tests failing:**
+```bash
+# Run health check first
+python3 run_tests.py --health-check
+
+# Check individual components
+python3 tests/unit/test_configuration.py
+```
+
+## 📞 Support
+
+- **Documentation**: See `/tests/README.md` for detailed test information
+- **Configuration**: Use `.env.optimized` as template for different setups
+- **Monitoring**: Regular health checks ensure system reliability
+- **Logs**: Container logs provide detailed debugging information
+
+## 🏆 Production Deployment
+
+For production use:
+1. Use strong passwords for Neo4j
+2. Consider resource limits in Docker Compose
+3. Set up log rotation and monitoring
+4. Regular backups of Neo4j database
+5. Monitor Ollama server resources
+6. Use environment-specific `.env` files
+
+---
+
+## 📚 Legacy Documentation
+
+The sections below contain the original documentation for reference.
+
+### Original Features
 
 The Graphiti MCP server exposes the following key high-level functions of Graphiti:
 
@@ -21,222 +274,7 @@ The Graphiti MCP server exposes the following key high-level functions of Graphi
 - **Group Management**: Organize and manage groups of related data with group_id filtering
 - **Graph Maintenance**: Clear the graph and rebuild indices
 
-## Quick Start for Claude Desktop, Cursor, and other clients
-
-1. Clone the Graphiti GitHub repo
-
-```bash
-git clone https://github.com/getzep/graphiti.git
-```
-
-or
-
-```bash
-gh repo clone getzep/graphiti
-```
-
-Note the full path to this directory.
-
-```
-cd graphiti && pwd
-```
-
-2. Install the [Graphiti prerequisites](#prerequisites).
-
-3. Configure Claude, Cursor, or other MCP client to use [Graphiti with a `stdio` transport](#integrating-with-mcp-clients). See the client documentation on where to find their MCP configuration files.
-
-## Installation
-
-### Prerequisites
-
-1. Ensure you have Python 3.10 or higher installed.
-2. A running Neo4j database (version 5.26 or later required)
-3. OpenAI API key for LLM operations
-
-### Setup
-
-1. Clone the repository and navigate to the mcp_server directory
-2. Use `uv` to create a virtual environment and install dependencies:
-
-```bash
-# Install uv if you don't have it already
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Create a virtual environment and install dependencies in one step
-uv sync
-```
-
-## Configuration
-
-The server uses the following environment variables:
-
-- `NEO4J_URI`: URI for the Neo4j database (default: `bolt://localhost:7687`)
-- `NEO4J_USER`: Neo4j username (default: `neo4j`)
-- `NEO4J_PASSWORD`: Neo4j password (default: `demodemo`)
-- `OPENAI_API_KEY`: OpenAI API key (required for LLM operations)
-- `OPENAI_BASE_URL`: Optional base URL for OpenAI API
-- `MODEL_NAME`: OpenAI model name to use for LLM operations.
-- `SMALL_MODEL_NAME`: OpenAI model name to use for smaller LLM operations.
-- `LLM_TEMPERATURE`: Temperature for LLM responses (0.0-2.0).
-- `AZURE_OPENAI_ENDPOINT`: Optional Azure OpenAI LLM endpoint URL
-- `AZURE_OPENAI_DEPLOYMENT_NAME`: Optional Azure OpenAI LLM deployment name
-- `AZURE_OPENAI_API_VERSION`: Optional Azure OpenAI LLM API version
-- `AZURE_OPENAI_EMBEDDING_API_KEY`: Optional Azure OpenAI Embedding deployment key (if other than `OPENAI_API_KEY`)
-- `AZURE_OPENAI_EMBEDDING_ENDPOINT`: Optional Azure OpenAI Embedding endpoint URL
-- `AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME`: Optional Azure OpenAI embedding deployment name
-- `AZURE_OPENAI_EMBEDDING_API_VERSION`: Optional Azure OpenAI API version
-- `AZURE_OPENAI_USE_MANAGED_IDENTITY`: Optional use Azure Managed Identities for authentication
-- `SEMAPHORE_LIMIT`: Episode processing concurrency. See [Concurrency and LLM Provider 429 Rate Limit Errors](#concurrency-and-llm-provider-429-rate-limit-errors)
-
-You can set these variables in a `.env` file in the project directory.
-
-## Running the Server
-
-To run the Graphiti MCP server directly using `uv`:
-
-```bash
-uv run graphiti_mcp_server.py
-```
-
-With options:
-
-```bash
-uv run graphiti_mcp_server.py --model gpt-4.1-mini --transport sse
-```
-
-Available arguments:
-
-- `--model`: Overrides the `MODEL_NAME` environment variable.
-- `--small-model`: Overrides the `SMALL_MODEL_NAME` environment variable.
-- `--temperature`: Overrides the `LLM_TEMPERATURE` environment variable.
-- `--transport`: Choose the transport method (sse or stdio, default: sse)
-- `--group-id`: Set a namespace for the graph (optional). If not provided, defaults to "default".
-- `--destroy-graph`: If set, destroys all Graphiti graphs on startup.
-- `--use-custom-entities`: Enable entity extraction using the predefined ENTITY_TYPES
-
-### Concurrency and LLM Provider 429 Rate Limit Errors
-
-Graphiti's ingestion pipelines are designed for high concurrency, controlled by the `SEMAPHORE_LIMIT` environment variable.
-By default, `SEMAPHORE_LIMIT` is set to `10` concurrent operations to help prevent `429` rate limit errors from your LLM provider. If you encounter such errors, try lowering this value.
-
-If your LLM provider allows higher throughput, you can increase `SEMAPHORE_LIMIT` to boost episode ingestion performance.
-
-### Docker Deployment
-
-The Graphiti MCP server can be deployed using Docker. The Dockerfile uses `uv` for package management, ensuring
-consistent dependency installation.
-
-#### Environment Configuration
-
-Before running the Docker Compose setup, you need to configure the environment variables. You have two options:
-
-1. **Using a .env file** (recommended):
-
-   - Copy the provided `.env.example` file to create a `.env` file:
-     ```bash
-     cp .env.example .env
-     ```
-   - Edit the `.env` file to set your OpenAI API key and other configuration options:
-     ```
-     # Required for LLM operations
-     OPENAI_API_KEY=your_openai_api_key_here
-     MODEL_NAME=gpt-4.1-mini
-     # Optional: OPENAI_BASE_URL only needed for non-standard OpenAI endpoints
-     # OPENAI_BASE_URL=https://api.openai.com/v1
-     ```
-   - The Docker Compose setup is configured to use this file if it exists (it's optional)
-
-2. **Using environment variables directly**:
-   - You can also set the environment variables when running the Docker Compose command:
-     ```bash
-     OPENAI_API_KEY=your_key MODEL_NAME=gpt-4.1-mini docker compose up
-     ```
-
-#### Neo4j Configuration
-
-The Docker Compose setup includes a Neo4j container with the following default configuration:
-
-- Username: `neo4j`
-- Password: `demodemo`
-- URI: `bolt://neo4j:7687` (from within the Docker network)
-- Memory settings optimized for development use
-
-#### Running with Docker Compose
-
-Start the services using Docker Compose:
-
-```bash
-docker compose up
-```
-
-Or if you're using an older version of Docker Compose:
-
-```bash
-docker-compose up
-```
-
-This will start both the Neo4j database and the Graphiti MCP server. The Docker setup:
-
-- Uses `uv` for package management and running the server
-- Installs dependencies from the `pyproject.toml` file
-- Connects to the Neo4j container using the environment variables
-- Exposes the server on port 8000 for HTTP-based SSE transport
-- Includes a healthcheck for Neo4j to ensure it's fully operational before starting the MCP server
-
-## Integrating with MCP Clients
-
-### Configuration
-
-To use the Graphiti MCP server with an MCP-compatible client, configure it to connect to the server:
-
-> [!IMPORTANT]
-> You will need the Python package manager, `uv` installed. Please refer to the [`uv` install instructions](https://docs.astral.sh/uv/getting-started/installation/).
->
-> Ensure that you set the full path to the `uv` binary and your Graphiti project folder.
-
-```json
-{
-  "mcpServers": {
-    "graphiti-memory": {
-      "transport": "stdio",
-      "command": "/Users/<user>/.local/bin/uv",
-      "args": [
-        "run",
-        "--isolated",
-        "--directory",
-        "/Users/<user>>/dev/zep/graphiti/mcp_server",
-        "--project",
-        ".",
-        "graphiti_mcp_server.py",
-        "--transport",
-        "stdio"
-      ],
-      "env": {
-        "NEO4J_URI": "bolt://localhost:7687",
-        "NEO4J_USER": "neo4j",
-        "NEO4J_PASSWORD": "password",
-        "OPENAI_API_KEY": "sk-XXXXXXXX",
-        "MODEL_NAME": "gpt-4.1-mini"
-      }
-    }
-  }
-}
-```
-
-For SSE transport (HTTP-based), you can use this configuration:
-
-```json
-{
-  "mcpServers": {
-    "graphiti-memory": {
-      "transport": "sse",
-      "url": "http://localhost:8000/sse"
-    }
-  }
-}
-```
-
-## Available Tools
+### Available Tools (Complete List)
 
 The Graphiti MCP server exposes the following tools:
 
@@ -250,131 +288,62 @@ The Graphiti MCP server exposes the following tools:
 - `clear_graph`: Clear all data from the knowledge graph and rebuild indices
 - `get_status`: Get the status of the Graphiti MCP server and Neo4j connection
 
-## Working with JSON Data
+### Working with JSON Data
 
 The Graphiti MCP server can process structured JSON data through the `add_episode` tool with `source="json"`. This
 allows you to automatically extract entities and relationships from structured data:
 
 ```
-
 add_episode(
 name="Customer Profile",
 episode_body="{\"company\": {\"name\": \"Acme Technologies\"}, \"products\": [{\"id\": \"P001\", \"name\": \"CloudSync\"}, {\"id\": \"P002\", \"name\": \"DataMiner\"}]}",
 source="json",
 source_description="CRM data"
 )
-
 ```
 
-## Integrating with the Cursor IDE
+### Alternative Installation (Without Docker)
 
-To integrate the Graphiti MCP Server with the Cursor IDE, follow these steps:
+1. Ensure you have Python 3.10 or higher installed.
+2. A running Neo4j database (version 5.26 or later required)
+3. OpenAI API key for LLM operations (or Ollama setup)
 
-1. Run the Graphiti MCP server using the SSE transport:
-
+#### Setup
 ```bash
-python graphiti_mcp_server.py --transport sse --use-custom-entities --group-id <your_group_id>
+# Install uv if you don't have it already
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Create a virtual environment and install dependencies in one step
+uv sync
 ```
 
-Hint: specify a `group_id` to namespace graph data. If you do not specify a `group_id`, the server will use "default" as the group_id.
-
-or
-
+#### Running Directly
 ```bash
-docker compose up
+uv run graphiti_mcp_server.py
 ```
 
-2. Configure Cursor to connect to the Graphiti MCP server.
-
-```json
-{
-  "mcpServers": {
-    "graphiti-memory": {
-      "url": "http://localhost:8000/sse"
-    }
-  }
-}
+With options:
+```bash
+uv run graphiti_mcp_server.py --model gpt-4.1-mini --transport sse
 ```
 
-3. Add the Graphiti rules to Cursor's User Rules. See [cursor_rules.md](cursor_rules.md) for details.
+### Legacy Environment Variables
 
-4. Kick off an agent session in Cursor.
+- `OPENAI_BASE_URL`: Optional base URL for OpenAI API
+- `MODEL_NAME`: OpenAI model name to use for LLM operations.
+- `SMALL_MODEL_NAME`: OpenAI model name to use for smaller LLM operations.
+- `LLM_TEMPERATURE`: Temperature for LLM responses (0.0-2.0).
+- `AZURE_OPENAI_*`: Various Azure OpenAI configuration options
+- `SEMAPHORE_LIMIT`: Episode processing concurrency
 
-The integration enables AI assistants in Cursor to maintain persistent memory through Graphiti's knowledge graph
-capabilities.
+### Telemetry
 
-## Integrating with Claude Desktop (Docker MCP Server)
-
-The Graphiti MCP Server container uses the SSE MCP transport. Claude Desktop does not natively support SSE, so you'll need to use a gateway like `mcp-remote`.
-
-1.  **Run the Graphiti MCP server using SSE transport**:
-
-    ```bash
-    docker compose up
-    ```
-
-2.  **(Optional) Install `mcp-remote` globally**:
-    If you prefer to have `mcp-remote` installed globally, or if you encounter issues with `npx` fetching the package, you can install it globally. Otherwise, `npx` (used in the next step) will handle it for you.
-
-    ```bash
-    npm install -g mcp-remote
-    ```
-
-3.  **Configure Claude Desktop**:
-    Open your Claude Desktop configuration file (usually `claude_desktop_config.json`) and add or modify the `mcpServers` section as follows:
-
-    ```json
-    {
-      "mcpServers": {
-        "graphiti-memory": {
-          // You can choose a different name if you prefer
-          "command": "npx", // Or the full path to mcp-remote if npx is not in your PATH
-          "args": [
-            "mcp-remote",
-            "http://localhost:8000/sse" // Ensure this matches your Graphiti server's SSE endpoint
-          ]
-        }
-      }
-    }
-    ```
-
-    If you already have an `mcpServers` entry, add `graphiti-memory` (or your chosen name) as a new key within it.
-
-4.  **Restart Claude Desktop** for the changes to take effect.
-
-## Requirements
-
-- Python 3.10 or higher
-- Neo4j database (version 5.26 or later required)
-- OpenAI API key (for LLM operations and embeddings)
-- MCP-compatible client
-
-## Telemetry
-
-The Graphiti MCP server uses the Graphiti core library, which includes anonymous telemetry collection. When you initialize the Graphiti MCP server, anonymous usage statistics are collected to help improve the framework.
-
-### What's Collected
-
-- Anonymous identifier and system information (OS, Python version)
-- Graphiti version and configuration choices (LLM provider, database backend, embedder type)
-- **No personal data, API keys, or actual graph content is ever collected**
-
-### How to Disable
-
-To disable telemetry in the MCP server, set the environment variable:
+The Graphiti MCP server uses the Graphiti core library, which includes anonymous telemetry collection. To disable:
 
 ```bash
 export GRAPHITI_TELEMETRY_ENABLED=false
 ```
 
-Or add it to your `.env` file:
+---
 
-```
-GRAPHITI_TELEMETRY_ENABLED=false
-```
-
-For complete details about what's collected and why, see the [Telemetry section in the main Graphiti README](../README.md#telemetry).
-
-## License
-
-This project is licensed under the same license as the parent Graphiti project.
+**Ready for AI assistant integration with complete local processing and persistent memory capabilities!**
