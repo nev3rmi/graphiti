@@ -190,6 +190,13 @@ class GraphitiLLMConfig(BaseModel):
     """Configuration for the LLM client.
 
     Centralizes all LLM-specific configuration parameters including API keys and model selection.
+    
+    Environment variables:
+    - OPENAI_LLM_BASE_URL: Base URL specifically for LLM operations (takes precedence)
+    - OPENAI_BASE_URL: Fallback base URL for both LLM and embedding operations
+    - MODEL_NAME: The primary LLM model to use
+    - SMALL_MODEL_NAME: The smaller LLM model to use for simple operations
+    - LLM_TEMPERATURE: Temperature setting for the LLM (0.0-2.0)
     """
 
     api_key: str | None = None
@@ -220,7 +227,7 @@ class GraphitiLLMConfig(BaseModel):
             os.environ.get('AZURE_OPENAI_USE_MANAGED_IDENTITY', 'false').lower() == 'true'
         )
         
-        base_url = os.environ.get('OPENAI_BASE_URL', None)
+        base_url = os.environ.get('OPENAI_LLM_BASE_URL', None) or os.environ.get('OPENAI_BASE_URL', None)
 
         if azure_openai_endpoint is None:
             # Setup for OpenAI API
@@ -362,6 +369,12 @@ class GraphitiEmbedderConfig(BaseModel):
     """Configuration for the embedder client.
 
     Centralizes all embedding-related configuration parameters.
+    
+    Environment variables:
+    - OPENAI_EMBEDDING_BASE_URL: Base URL specifically for embedding operations (takes precedence)
+    - OPENAI_BASE_URL: Fallback base URL for both LLM and embedding operations
+    - EMBEDDER_MODEL_NAME: The embedding model to use
+    - EMBEDDING_DIM: Custom embedding dimension (optional)
     """
 
     model: str = DEFAULT_EMBEDDER_MODEL
@@ -390,7 +403,7 @@ class GraphitiEmbedderConfig(BaseModel):
             os.environ.get('AZURE_OPENAI_USE_MANAGED_IDENTITY', 'false').lower() == 'true'
         )
         
-        base_url = os.environ.get('OPENAI_BASE_URL', None)
+        base_url = os.environ.get('OPENAI_EMBEDDING_BASE_URL', None) or os.environ.get('OPENAI_BASE_URL', None)
         embedding_dim_env = os.environ.get('EMBEDDING_DIM', '')
         embedding_dim = int(embedding_dim_env) if embedding_dim_env.strip() else None
         
